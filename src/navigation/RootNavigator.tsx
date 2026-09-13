@@ -59,6 +59,7 @@ export const RootNavigator: React.FC = () => {
             libraryItems={libraryItems}
             scales={scales}
             reminders={reminders}
+            exams={exams}
             onNavigate={(tab) => setActiveTab(tab)}
             onSelectPlan={(plan) => {
               setSelectedPlan(plan);
