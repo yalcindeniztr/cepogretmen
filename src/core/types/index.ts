@@ -222,3 +222,68 @@ export interface DepartmentMinutesItem {
   updatedAt: string;
 }
 
+export interface SchoolBasedPlanItem {
+  id: string;
+  gradeLevel: GradeLevel;
+  term: '1. Dönem' | '2. Dönem';
+  activityTitle: string;
+  themeUnit: string;
+  localContext: string; // Çevre şartları, tarihi mekan, yerel arşiv, okul imkanı
+  objective: string;
+  learningOutcomes: string[];
+  implementationSteps: string[];
+  evaluationEvidence: string;
+  resources: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SocialActivityPlanItem {
+  id: string;
+  gradeLevel: GradeLevel;
+  term: '1. Dönem' | '2. Dönem';
+  activityTitle: string;
+  category: 'MILLI_BAYRAM_ANMA' | 'TARIH_KULUBU' | 'MUNAZARA_PANEL' | 'MUZE_SERGI' | 'SOZLU_TARIH';
+  maarifValues: string[];
+  targetMonthOrWeek: string;
+  description: string;
+  studentTasks: string[];
+  expectedOutcomes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TwoTermYearlyPlanWeek {
+  weekNumber: number;
+  term: '1. Dönem' | '2. Dönem';
+  dateRange: string;
+  monthName: string;
+  hours: number;
+  cumulativeHours: number;
+  themeUnit: string;
+  learningOutcomes: string;
+  processComponents: string;
+  valuesAndSkills: string;
+  methodsAndTechniques: string;
+  toolsAndMaterials: string;
+  specialType?: 'NORMAL' | 'EXAM' | 'VACATION' | 'SCHOOL_BASED' | 'SOCIAL_ACTIVITY';
+  specialNote?: string;
+}
+
+export interface FullTwoTermYearlyPlan {
+  id: string;
+  academicYear: string;
+  gradeLevel: GradeLevel;
+  weeklyHours: number;
+  totalHours: number;
+  term1Weeks: TwoTermYearlyPlanWeek[];
+  term2Weeks: TwoTermYearlyPlanWeek[];
+  schoolBasedPlans: SchoolBasedPlanItem[];
+  socialActivities: SocialActivityPlanItem[];
+  schoolName: string;
+  teacherName: string;
+  principalName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

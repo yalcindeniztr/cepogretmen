@@ -1,4 +1,4 @@
-import { GradeLevel, PlanType, ExamPaper, ExamQuestion } from '../../core/types';
+import { GradeLevel, PlanType, ExamPaper, ExamQuestion, SchoolBasedPlanItem, SocialActivityPlanItem } from '../../core/types';
 import { HISTORY_CURRICULUM } from '../../core/constants/maarifCurriculum';
 
 export interface GeneratedPlanData {
@@ -693,6 +693,83 @@ Lütfen YALNIZCA aşağıdaki JSON formatında geçerli bir yanıt ver:
       instructions: '1. Sınav süresi 40 dakikadır. 2. Soruları dikkatlice okuyup cevabınızı soru altındaki boşluğa yazınız. 3. Sınavda 4 soru bulunmakta olup her soru 25 puandır. Eksik ve yarım yanıtlar da puanlandırılacaktır. Başarılar dileriz.',
       questions: bepQuestions,
       totalScore: 100,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Türkiye Yüzyılı Maarif Modeli Okul Temelli Planlama AI Üreticisi
+   */
+  static async generateSchoolBasedPlan(
+    gradeLevel: GradeLevel,
+    localContext: string,
+    themeOrTopic: string,
+    schoolName: string = 'Ballıca MTAL'
+  ): Promise<SchoolBasedPlanItem> {
+    const defaultPlan: SchoolBasedPlanItem = {
+      id: `school-plan-gen-${Date.now()}`,
+      gradeLevel,
+      term: '2. Dönem',
+      activityTitle: `${schoolName} Çevresi Tarihsel Miras ve Kültürel Envanter İncelemesi`,
+      themeUnit: themeOrTopic || `TAR.${gradeLevel}.4. Yerel ve Kültürel Tarih İncelemeleri`,
+      localContext: localContext || `${schoolName} yerleşkesi, bölgedeki tarihi cami, şehitlik veya anıt mekanlar.`,
+      objective: 'Öğrencilerin yerel tarihi unsurları yerinde görerek somut kanıtlarla milli ve kültürel miras bilincini geliştirmesi.',
+      learningOutcomes: [
+        `TAR.${gradeLevel}.4.1. Yaşadığı çevredeki tarihi mekan ve eserleri dönem özellikleri bağlamında çözümler.`,
+        `TAR.${gradeLevel}.4.2. Kültürel mirasın korunması ve gelecek nesillere aktarılması bilinci geliştirir.`
+      ],
+      implementationSteps: [
+        'Zümre öğretmenleri tarafından incelenecek tarihi mekan ve eserin belirlenmesi.',
+        'Öğrencilere yönelik gözlem formu, fotoğraf çekim kılavuzu ve röportaj rehberi hazırlanması.',
+        'Elde edilen fotoğraf, belge ve notların okul panosunda veya dijital sunumda sergilenmesi.'
+      ],
+      evaluationEvidence: 'Saha gözlem formu, hazırlanan görsel tanıtım panosu ve dereceli değerlendirme ölçeği.',
+      resources: 'İl/İlçe Kültür Envanteri, EBA 3D Sanal Müze, Yerel Tarih Kitapları ve Arşivleri.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    return defaultPlan;
+  }
+
+  /**
+   * Türkiye Yüzyılı Maarif Modeli Sosyal Etkinlik Planlama AI Üreticisi
+   */
+  static async generateSocialActivityPlan(
+    gradeLevel: GradeLevel,
+    term: '1. Dönem' | '2. Dönem',
+    category: SocialActivityPlanItem['category'] = 'MUNAZARA_PANEL',
+    customTopic?: string
+  ): Promise<SocialActivityPlanItem> {
+    const isTerm1 = term === '1. Dönem';
+    const isGrade12 = gradeLevel === 12;
+
+    const title = customTopic || (isGrade12
+      ? 'Cumhuriyet Vizyonu ve Türkiye Yüzyılı Gençlik Tarih Çalıştayı'
+      : isTerm1
+      ? 'Tarihsel Empati ve Zaman Yolculuğu Münazarası'
+      : 'Türkiye Yüzyılı Kültürel Miras Şenliği ve Canlandırmaları');
+
+    return {
+      id: `social-act-gen-${Date.now()}`,
+      gradeLevel,
+      term,
+      activityTitle: title,
+      category,
+      maarifValues: ['D19. Vatanseverlik', 'D4. Dayanışma', 'D3. Bilimsellik', 'D18. Sorumluluk'],
+      targetMonthOrWeek: isGrade12
+        ? '2. Dönem Son Ayı (Mayıs/Haziran)'
+        : isTerm1
+        ? '1. Dönem Sonu (Ocak Ayı)'
+        : '2. Dönem Sonu (Haziran Ayı)',
+      description: 'Türkiye Yüzyılı Maarif Modeli Erdem-Değer-Eylem çerçevesinde öğrencilerin aktif katılımıyla gerçekleştirilecek tarih sosyal etkinliği.',
+      studentTasks: [
+        'Konuya ilişkin birinci elden tarihi kaynak ve kanıtların toplanması.',
+        'Rol paylaşımı, sahne/pano hazırlığı ve görev dağılımının yapılması.',
+        'Etkinliğin okul öğrencilerine sunulması ve sonuç raporunun hazırlanması.'
+      ],
+      expectedOutcomes: 'Tarihsel düşünme, toplumsal dayanışma, milli hafıza ve sözlü ifade becerilerinde gelişim.',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

@@ -21,6 +21,7 @@ import { EmbossedBadge } from '../../components/3d/EmbossedBadge';
 import { DocxExportService } from '../../services/export/docxExportService';
 import { PdfPrintService } from '../../services/export/pdfPrintService';
 import { SpeechService } from '../../services/speech/speechService';
+import { FullYearlyPlanView } from './FullYearlyPlanView';
 
 interface PlanListViewProps {
   planType: PlanType;
@@ -42,6 +43,7 @@ export const PlanListView: React.FC<PlanListViewProps> = ({
   const [selectedGrade, setSelectedGrade] = useState<number | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(planType === 'YEARLY' ? 'table' : 'cards');
+  const [yearlyViewType, setYearlyViewType] = useState<'TWO_TERM' | 'WEEKLY_LIST'>('TWO_TERM');
 
   const filteredPlans = plans
     .filter(p => p.type === planType)
@@ -93,8 +95,40 @@ export const PlanListView: React.FC<PlanListViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 2 Dönemli Yıllık Plan vs Haftalık Tekil Düzenleme Switcher */}
+      {planType === 'YEARLY' && (
+        <div className="flex items-center gap-2 bg-slate-200/70 p-1.5 rounded-2xl w-fit">
+          <button
+            onClick={() => setYearlyViewType('TWO_TERM')}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+              yearlyViewType === 'TWO_TERM'
+                ? 'bg-white text-maarif-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Calendar className="w-4 h-4 text-maarif-600" />
+            <span>2 Dönemli Yıllık Plan (Tüm Yıl • Tatil, Sınav, Okul Temelli & Sosyal Etkinlik)</span>
+          </button>
+          <button
+            onClick={() => setYearlyViewType('WEEKLY_LIST')}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+              yearlyViewType === 'WEEKLY_LIST'
+                ? 'bg-white text-maarif-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <TableIcon className="w-4 h-4 text-slate-600" />
+            <span>Haftalık Tekil Kayıtlar</span>
+          </button>
+        </div>
+      )}
+
+      {planType === 'YEARLY' && yearlyViewType === 'TWO_TERM' ? (
+        <FullYearlyPlanView settings={settings} />
+      ) : (
+        <>
+          {/* Header Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2.5">
             {planType === 'YEARLY' ? (
@@ -507,6 +541,8 @@ export const PlanListView: React.FC<PlanListViewProps> = ({
             </EmbossedCard>
           ))}
         </div>
+      )}
+        </>
       )}
     </div>
   );

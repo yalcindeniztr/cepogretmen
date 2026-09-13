@@ -1,4 +1,4 @@
-import { PlanItem, AppSettings, EvaluationScale, ExamPaper, ExamItemAnalysis, PerformanceTaskItem } from '../../core/types';
+import { PlanItem, AppSettings, EvaluationScale, ExamPaper, ExamItemAnalysis, PerformanceTaskItem, FullTwoTermYearlyPlan } from '../../core/types';
 
 export class PdfPrintService {
   /**
@@ -1064,6 +1064,137 @@ export class PdfPrintService {
         <div style="margin-top: 20px; text-align: right; font-weight: bold;">
           ${settings.teacherName} • Tarih Dersi Öğretmeni
         </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  }
+
+  /**
+   * MEB Maarif Modeli 2 Dönemli Yıllık Plan Yazdırma / PDF Çıktısı (A4 Yatay)
+   */
+  static printFullTwoTermYearlyPlan(plan: FullTwoTermYearlyPlan, settings: AppSettings): void {
+    const printWindow = window.open('', '_blank', 'width=1200,height=850');
+    if (!printWindow) {
+      alert('Yazdırma penceresi açılamadı. Lütfen tarayıcınızın pop-up engelleyicisini kapatın.');
+      return;
+    }
+
+    const renderTableRows = (weeks: typeof plan.term1Weeks) => {
+      return weeks.map((w) => {
+        let bgStyle = 'background-color: #ffffff;';
+        if (w.specialType === 'EXAM') bgStyle = 'background-color: #fef3c7; font-weight: bold;';
+        else if (w.specialType === 'SCHOOL_BASED') bgStyle = 'background-color: #d1fae5; font-weight: bold;';
+        else if (w.specialType === 'SOCIAL_ACTIVITY') bgStyle = 'background-color: #f3e8ff; font-weight: bold;';
+
+        return `
+          <tr style="${bgStyle}">
+            <td style="text-align: center;"><strong>${w.monthName}</strong><br><small>${w.dateRange}</small></td>
+            <td style="text-align: center;"><strong>${w.weekNumber}</strong></td>
+            <td style="text-align: center;">${w.hours}</td>
+            <td><strong>${w.themeUnit}</strong></td>
+            <td>${w.learningOutcomes}</td>
+            <td style="color: #4b5563; font-size: 8.5pt;">${w.valuesAndSkills}</td>
+            <td style="color: ${w.specialNote?.includes('Sınav') ? '#b91c1c' : '#1f2937'}; font-weight: ${w.specialNote ? 'bold' : 'normal'};">
+              ${w.specialNote || '-'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="tr">
+      <head>
+        <meta charset="UTF-8">
+        <title>${settings.schoolName} - ${plan.gradeLevel}. Sınıf Tarih 2 Dönemli Yıllık Planı</title>
+        <style>
+          @page { size: A4 landscape; margin: 8mm; }
+          * { box-sizing: border-box; font-family: 'Times New Roman', Times, serif; }
+          body { margin: 0; padding: 5px; color: #000; font-size: 9pt; line-height: 1.25; }
+          .header-box { text-align: center; margin-bottom: 8px; border-bottom: 2px solid #003366; padding-bottom: 4px; }
+          .header-box h2 { margin: 1px 0; font-size: 13pt; font-weight: bold; color: #003366; }
+          .header-box h3 { margin: 1px 0; font-size: 11pt; color: #0c8ce9; }
+          .meta-info { margin: 4px 0 8px 0; font-size: 9pt; color: #333; text-align: center; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+          th, td { border: 1px solid #444; padding: 4px 6px; vertical-align: top; }
+          th { background-color: #0c8ce9; color: white; text-align: center; font-size: 8.5pt; }
+          .section-title { font-size: 10.5pt; font-weight: bold; color: #003366; margin: 8px 0 4px 0; border-left: 4px solid #0c8ce9; padding-left: 6px; }
+          .no-print { margin-bottom: 10px; padding: 8px 14px; background: #e0f2fe; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+          @media print { .no-print { display: none; } body { padding: 0; } }
+        </style>
+      </head>
+      <body>
+        <div class="no-print">
+          <span><strong>Maarif Modeli 2 Dönemli Yıllık Plan (A4 Yatay):</strong> Tatiller, sınavlar, okul temelli ve sosyal etkinlik haftaları işlenmiştir.</span>
+          <button onclick="window.print()" style="background: #0c8ce9; color: white; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer;">
+            🖨️ Yazdır / PDF Kaydet
+          </button>
+        </div>
+
+        <div class="header-box">
+          <h2>T.C. MİLLÎ EĞİTİM BAKANLIĞI - ${settings.schoolName.toUpperCase()}</h2>
+          <h3>${plan.academicYear} EĞİTİM ÖĞRETİM YILI ${plan.gradeLevel}. SINIF TARİH DERSİ 2 DÖNEMLİ YILLIK PLANI</h3>
+          <div class="meta-info">
+            Haftalık Ders Saati: <strong>${plan.weeklyHours} Saat</strong> • Yıllık Toplam: <strong>${plan.totalHours} Saat</strong> • Öğretmen: <strong>${settings.teacherName}</strong>
+          </div>
+        </div>
+
+        <div class="section-title">BİRİNCİ DÖNEM ÇALIŞMA TAKVİMİ VE DERS PLANI (EYLÜL - OCAK)</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 10%;">AY / TARİH</th>
+              <th style="width: 4%;">HAFTA</th>
+              <th style="width: 4%;">SAAT</th>
+              <th style="width: 22%;">TEMA / ÖĞRENME ALANI</th>
+              <th style="width: 28%;">ÖĞRENME ÇIKTILARI VE SÜREÇ</th>
+              <th style="width: 14%;">ERDEM-DEĞER-BECERİ</th>
+              <th style="width: 18%;">ÖZEL GÜN / SINAV / ETKİNLİK</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderTableRows(plan.term1Weeks)}
+          </tbody>
+        </table>
+
+        <div class="section-title" style="page-break-before: always;">İKİNCİ DÖNEM ÇALIŞMA TAKVİMİ VE DERS PLANI (ŞUBAT - HAZİRAN)</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 10%;">AY / TARİH</th>
+              <th style="width: 4%;">HAFTA</th>
+              <th style="width: 4%;">SAAT</th>
+              <th style="width: 22%;">TEMA / ÖĞRENME ALANI</th>
+              <th style="width: 28%;">ÖĞRENME ÇIKTILARI VE SÜREÇ</th>
+              <th style="width: 14%;">ERDEM-DEĞER-BECERİ</th>
+              <th style="width: 18%;">ÖZEL GÜN / SINAV / ETKİNLİK</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderTableRows(plan.term2Weeks)}
+          </tbody>
+        </table>
+
+        <table style="border: none; margin-top: 20px;">
+          <tr style="border: none;">
+            <td style="border: none; width: 50%; text-align: center;">
+              <strong>${settings.teacherName}</strong><br>
+              Tarih Dersi Öğretmeni<br>
+              İmza: .............................
+            </td>
+            <td style="border: none; width: 50%; text-align: center;">
+              <strong>UYGUNDUR</strong><br>
+              ${settings.principalName}<br>
+              Okul Müdürü<br>
+              İmza / Mühür: .............................
+            </td>
+          </tr>
+        </table>
       </body>
       </html>
     `;

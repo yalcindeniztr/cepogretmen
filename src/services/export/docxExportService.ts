@@ -13,7 +13,7 @@ import {
   PageOrientation
 } from 'docx';
 import { saveAs } from 'file-saver';
-import { PlanItem, AppSettings, EvaluationScale, ExamPaper, ExamItemAnalysis, PerformanceTaskItem, DepartmentMinutesItem } from '../../core/types';
+import { PlanItem, AppSettings, EvaluationScale, ExamPaper, ExamItemAnalysis, PerformanceTaskItem, DepartmentMinutesItem, FullTwoTermYearlyPlan } from '../../core/types';
 
 export class DocxExportService {
   /**
@@ -2048,6 +2048,110 @@ export class DocxExportService {
 
     const blob = await Packer.toBlob(doc);
     const fileName = `${settings.schoolName}_Tarih_Zumre_Tutanagi_${minutes.meetingType}.docx`;
+    saveAs(blob, fileName);
+  }
+
+  /**
+   * MEB Maarif Modeli 2 Dönemli Yıllık Plan Word Çıktısı (A4 Yatay)
+   */
+  static async exportFullTwoTermYearlyPlanToWord(plan: FullTwoTermYearlyPlan, settings: AppSettings): Promise<void> {
+    const thinBorder = {
+      top: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      left: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      right: { style: BorderStyle.SINGLE, size: 1, color: '888888' }
+    };
+
+    const buildTermRows = (weeks: typeof plan.term1Weeks) => {
+      return weeks.map((w) => {
+        let fill = 'FFFFFF';
+        if (w.specialType === 'EXAM') fill = 'FFF2CC';
+        else if (w.specialType === 'SCHOOL_BASED') fill = 'D5E8D4';
+        else if (w.specialType === 'SOCIAL_ACTIVITY') fill = 'E1D5E7';
+
+        return new TableRow({
+          children: [
+            new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, shading: { fill }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${w.monthName}\n${w.dateRange}`, size: 15, bold: true })] })] }),
+            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: { fill }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${w.weekNumber}`, size: 16, bold: true })] })] }),
+            new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: { fill }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${w.hours}`, size: 16 })] })] }),
+            new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: w.themeUnit, bold: w.specialType !== 'NORMAL', size: 15, color: w.specialType !== 'NORMAL' ? '003366' : '000000' })] })] }),
+            new TableCell({ width: { size: 26, type: WidthType.PERCENTAGE }, shading: { fill }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: w.learningOutcomes, size: 15 })] })] }),
+            new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: w.valuesAndSkills, size: 14, color: '555555' })] })] }),
+            new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: w.specialNote || '-', size: 14, bold: !!w.specialNote, color: w.specialNote?.includes('Sınav') ? 'B91C1C' : '333333' })] })] })
+          ]
+        });
+      });
+    };
+
+    const headerRow = new TableRow({
+      tableHeader: true,
+      children: [
+        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'AY / TARİH', bold: true, color: 'FFFFFF', size: 16 })] })] }),
+        new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'HAFTA', bold: true, color: 'FFFFFF', size: 16 })] })] }),
+        new TableCell({ width: { size: 5, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'SAAT', bold: true, color: 'FFFFFF', size: 16 })] })] }),
+        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'TEMA / ÖĞRENME ALANI', bold: true, color: 'FFFFFF', size: 16 })] })] }),
+        new TableCell({ width: { size: 26, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'ÖĞRENME ÇIKTILARI VE SÜREÇ', bold: true, color: 'FFFFFF', size: 16 })] })] }),
+        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'ERDEM-DEĞER-BECERİ', bold: true, color: 'FFFFFF', size: 16 })] })] }),
+        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'BELİRLİ GÜN / SINAV / ETKİNLİK', bold: true, color: 'FFFFFF', size: 16 })] })] })
+      ]
+    });
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: {
+            page: {
+              size: { orientation: PageOrientation.LANDSCAPE },
+              margin: { top: 540, bottom: 540, left: 540, right: 540 }
+            }
+          },
+          children: [
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `T.C. MİLLÎ EĞİTİM BAKANLIĞI - ${settings.schoolName.toUpperCase()}`, bold: true, size: 22, color: '003366' })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${plan.academicYear} EĞİTİM ÖĞRETİM YILI ${plan.gradeLevel}. SINIF TARİH DERSİ 2 DÖNEMLİ YILLIK PLANI`, bold: true, size: 20, color: '0C8CE9' })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `Haftalık Ders Saati: ${plan.weeklyHours} Saat  •  Yıllık Toplam: ${plan.totalHours} Saat  •  Öğretmen: ${settings.teacherName}`, bold: true, size: 17, color: '444444' })] }),
+            new Paragraph({ text: '' }),
+            new Paragraph({ children: [new TextRun({ text: 'BİRİNCİ DÖNEM ÇALIŞMA PLANI (EYLÜL - OCAK)', bold: true, size: 19, color: '003366' })] }),
+            new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...buildTermRows(plan.term1Weeks)] }),
+            new Paragraph({ text: '' }),
+            new Paragraph({ children: [new TextRun({ text: 'İKİNCİ DÖNEM ÇALIŞMA PLANI (ŞUBAT - HAZİRAN)', bold: true, size: 19, color: '003366' })] }),
+            new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...buildTermRows(plan.term2Weeks)] }),
+            new Paragraph({ text: '' }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                      children: [
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: settings.teacherName, bold: true, size: 19 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tarih Dersi Öğretmeni', size: 17 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'İmza: .............................', size: 16 })] })
+                      ]
+                    }),
+                    new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                      children: [
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'UYGUNDUR', bold: true, size: 18, color: '003366' })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: settings.principalName, bold: true, size: 19 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Okul Müdürü', size: 17 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'İmza / Mühür: .............................', size: 16 })] })
+                      ]
+                    })
+                  ]
+                })
+              ]
+            })
+          ]
+        }
+      ]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    const fileName = `${settings.schoolName}_Tarih_${plan.gradeLevel}Sinif_2Donemli_Yillik_Plan.docx`;
     saveAs(blob, fileName);
   }
 }
