@@ -16,7 +16,8 @@ import {
   ChevronDown,
   ChevronUp,
   HelpCircle,
-  FileText
+  FileText,
+  BarChart3
 } from 'lucide-react';
 import { ExamPaper, GradeLevel, AppSettings } from '../../core/types';
 import { EmbossedCard } from '../../components/3d/EmbossedCard';
@@ -24,6 +25,8 @@ import { EmbossedButton } from '../../components/3d/EmbossedButton';
 import { EmbossedBadge } from '../../components/3d/EmbossedBadge';
 import { DocxExportService } from '../../services/export/docxExportService';
 import { PdfPrintService } from '../../services/export/pdfPrintService';
+import { GeminiService } from '../../services/ai/geminiService';
+import { ExamAnalysisModal } from './ExamAnalysisModal';
 
 interface ExamListViewProps {
   exams: ExamPaper[];
@@ -31,6 +34,7 @@ interface ExamListViewProps {
   onOpenCreate: () => void;
   onSelectExam: (exam: ExamPaper) => void;
   onDeleteExam: (id: string) => void;
+  onSaveExam: (exam: ExamPaper) => void;
 }
 
 export const ExamListView: React.FC<ExamListViewProps> = ({
@@ -38,12 +42,14 @@ export const ExamListView: React.FC<ExamListViewProps> = ({
   settings,
   onOpenCreate,
   onSelectExam,
-  onDeleteExam
+  onDeleteExam,
+  onSaveExam
 }) => {
   const [selectedGrade, setSelectedGrade] = useState<number | 'ALL'>('ALL');
   const [selectedTerm, setSelectedTerm] = useState<string | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedExamId, setExpandedExamId] = useState<string | null>(null);
+  const [analyzingExam, setAnalyzingExam] = useState<ExamPaper | null>(null);
 
   const filteredExams = exams
     .filter(e => (selectedGrade === 'ALL' ? true : e.gradeLevel === selectedGrade))
@@ -358,6 +364,32 @@ export const ExamListView: React.FC<ExamListViewProps> = ({
                       <Printer className="w-3.5 h-3.5 text-amber-600" />
                       <span>Cevap Anahtarı (PDF)</span>
                     </button>
+
+                    {/* MEB Sınav Soru Analiz Tutanağı & e-Okul Not Çizelgesi */}
+                    <button
+                      onClick={() => setAnalyzingExam(exam)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-all shadow-sm cursor-pointer"
+                      title="Soru ve kazanım başarı yüzdeleri, MEB analiz formu ve e-Okul not çizelgesi"
+                    >
+                      <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Soru Analizi & e-Okul {exam.analysis ? '✓' : ''}</span>
+                    </button>
+
+                    {/* BEP / Kaynaştırma Sınavı Türetici (Sadece normal sınavlarda) */}
+                    {!exam.isBep && (
+                      <button
+                        onClick={() => {
+                          const bep = GeminiService.deriveBepExam(exam);
+                          onSaveExam(bep);
+                          alert(`"${exam.gradeLevel}. Sınıf ${exam.term} ${exam.examNumber}" sınavından 4 soruluk (100 Puanlık) BEP Kaynaştırma Sınavı başarıyla türetildi ve sınav listenize eklendi!`);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-xl transition-all shadow-sm cursor-pointer"
+                        title="Bu sınavdan kaynaştırma öğrencileri için 4 soruluk basitleştirilmiş BEP Sınavı türet"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                        <span>BEP Sınavı Türet</span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Edit & Delete */}
@@ -386,6 +418,20 @@ export const ExamListView: React.FC<ExamListViewProps> = ({
             );
           })}
         </div>
+      )}
+
+      {/* Sınav Soru Analiz & e-Okul Modal */}
+      {analyzingExam && (
+        <ExamAnalysisModal
+          exam={analyzingExam}
+          settings={settings}
+          isOpen={!!analyzingExam}
+          onClose={() => setAnalyzingExam(null)}
+          onSaveAnalysis={(updated) => {
+            onSaveExam(updated);
+            setAnalyzingExam(null);
+          }}
+        />
       )}
     </div>
   );

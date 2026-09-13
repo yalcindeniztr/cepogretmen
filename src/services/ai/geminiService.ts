@@ -640,6 +640,63 @@ Lütfen YALNIZCA aşağıdaki JSON formatında geçerli bir yanıt ver:
       updatedAt: new Date().toISOString()
     };
   }
+
+  /**
+   * Mevcut Sınavdan BEP (Bireyselleştirilmiş Eğitim Programı) & Kaynaştırma Sınavı Türetici
+   * 10 soruluk genel sınavdan en temel 4 soruyu seçer, yönergeleri basitleştirir,
+   * puanları 25'er puana eşitler (4 x 25 = 100P) ve özel BEP formatı oluşturur.
+   */
+  static deriveBepExam(baseExam: ExamPaper): ExamPaper {
+    const sortedQuestions = [...baseExam.questions].sort((a, b) => {
+      const order = { Kolay: 1, Orta: 2, Zor: 3 };
+      return (order[a.difficulty] || 2) - (order[b.difficulty] || 2);
+    });
+
+    const bepQuestionsSource = sortedQuestions.slice(0, 4);
+    const pointsPerQuestion = 25; // 4 questions x 25 = 100 points
+
+    const bepQuestions: ExamQuestion[] = bepQuestionsSource.map((q, idx) => {
+      return {
+        id: `q-bep-${idx + 1}-${Date.now()}`,
+        questionNumber: idx + 1,
+        difficulty: 'Kolay',
+        cognitiveLevel: 'Kavrama / Temel Bilgi',
+        learningOutcome: q.learningOutcome,
+        domainSkill: q.domainSkill,
+        conceptualSkill: q.conceptualSkill,
+        value: q.value,
+        contextText: q.contextText ? `Bilgi Notu: ${q.contextText.substring(0, 200)}...` : '',
+        questionText: `(Açık ve Kısa Yanıtlayınız): ${q.questionText}`,
+        sampleAnswer: q.sampleAnswer,
+        rubricGuide: [
+          {
+            criterion: 'Soruda istenen temel tarihi bilgiyi veya kavramı doğru yazma',
+            points: 15,
+            partialGuidance: 'Kavramı kısmen hatırlayana 8 puan verilir.'
+          },
+          {
+            criterion: 'Kendi cümleleriyle basit ve anlaşılır açıklama yapma',
+            points: 10,
+            partialGuidance: 'Kısmen açıklayana 5 puan verilir.'
+          }
+        ],
+        partialCreditNotes: 'Öğrenci soruyu kısmen yanıtladığında veya temel kavramı yazıp açıklamayı eksik bıraktığında kademeli olarak 10-15 puan verilir.',
+        maxPoints: pointsPerQuestion
+      };
+    });
+
+    return {
+      ...baseExam,
+      id: `exam-bep-${Date.now()}`,
+      isBep: true,
+      scenario: `${baseExam.scenario} (BEP - Kaynaştırma Sınavı)`,
+      instructions: '1. Sınav süresi 40 dakikadır. 2. Soruları dikkatlice okuyup cevabınızı soru altındaki boşluğa yazınız. 3. Sınavda 4 soru bulunmakta olup her soru 25 puandır. Eksik ve yarım yanıtlar da puanlandırılacaktır. Başarılar dileriz.',
+      questions: bepQuestions,
+      totalScore: 100,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  }
 }
 
 

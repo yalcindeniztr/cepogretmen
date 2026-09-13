@@ -12,7 +12,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Compass,
-  FileCheck
+  FileCheck,
+  Users
 } from 'lucide-react';
 import { AppSettings, PlanItem, LibraryItem, EvaluationScale, MebCalendarReminder } from '../../core/types';
 import { EmbossedCard } from '../../components/3d/EmbossedCard';
@@ -20,6 +21,7 @@ import { EmbossedButton } from '../../components/3d/EmbossedButton';
 import { EmbossedBadge } from '../../components/3d/EmbossedBadge';
 import { SpeechService } from '../../services/speech/speechService';
 import { ActiveTab } from '../../components/common/Navbar';
+import { DepartmentMinutesModal } from '../documents/DepartmentMinutesModal';
 
 interface DashboardViewProps {
   settings: AppSettings;
@@ -42,6 +44,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const yearlyPlans = plans.filter(p => p.type === 'YEARLY');
   const dailyPlans = plans.filter(p => p.type === 'DAILY');
+  const [isMinutesModalOpen, setIsMinutesModalOpen] = React.useState(false);
 
   const speakReminder = (reminder: MebCalendarReminder) => {
     const speechText = `Hatırlatma: ${reminder.title}. Tarih: ${reminder.dateStr}. ${reminder.description} Yapılması gereken işlem: ${reminder.actionRequired}`;
@@ -88,6 +91,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={() => onNavigate('exams')}
             >
               Açık Uçlu Sınav Hazırla
+            </EmbossedButton>
+            <EmbossedButton
+              variant="primary"
+              size="md"
+              icon={<Users className="w-4 h-4" />}
+              onClick={() => setIsMinutesModalOpen(true)}
+            >
+              Zümre Karar Tutanağı
             </EmbossedButton>
             <EmbossedButton
               variant="purple"
@@ -284,8 +295,34 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </p>
             </div>
           </EmbossedCard>
+
+          {/* Zümre Toplantı Tutanakları Kartı */}
+          <EmbossedCard variant="slate" onClick={() => setIsMinutesModalOpen(true)} className="cursor-pointer hover:border-maarif-400 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-800">Resmi Kurul Evrakları</span>
+              <div className="p-2 bg-sky-100 text-sky-700 rounded-xl">
+                <Users className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <h3 className="text-sm font-bold text-slate-900">Tarih Zümre Öğretmenler Kurulu</h3>
+              <p className="text-xs text-slate-600 mt-1">
+                1. Dönem Başı, 2. Dönem Başı ve Sene Sonu toplantı tutanaklarını 12 maddelik MEB Maarif gündemiyle düzenleyip Word (.docx) olarak indirin.
+              </p>
+              <div className="mt-3 text-xs font-bold text-maarif-600 flex items-center gap-1">
+                Tutanağı Düzenle & İndir →
+              </div>
+            </div>
+          </EmbossedCard>
         </div>
       </div>
+
+      {/* Department Minutes Modal */}
+      <DepartmentMinutesModal
+        isOpen={isMinutesModalOpen}
+        onClose={() => setIsMinutesModalOpen(false)}
+        settings={settings}
+      />
     </div>
   );
 };

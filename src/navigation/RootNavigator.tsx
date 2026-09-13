@@ -105,6 +105,7 @@ export const RootNavigator: React.FC = () => {
               setIsExamModalOpen(true);
             }}
             onDeleteExam={deleteExam}
+            onSaveExam={saveExam}
           />
         );
       case 'library':

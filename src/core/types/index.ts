@@ -147,6 +147,78 @@ export interface ExamPaper {
   schoolName: string;
   teacherName: string;
   instructions: string;
+  isBep?: boolean; // BEP / Kaynaştırma sınavı mı?
+  analysis?: ExamItemAnalysis; // Sınav soru ve kazanım analiz tablosu
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ExamStudentResult {
+  id: string;
+  studentNo: string;
+  studentName: string;
+  questionScores: number[]; // 10 sorunun her birinden alınan puanlar
+  totalScore: number;
+}
+
+export interface ExamItemAnalysis {
+  id: string;
+  examId: string;
+  className: string; // Örn: 9/A, 10/B MTAL
+  academicYear: string;
+  term: string;
+  examNumber: string;
+  examDate?: string;
+  students: ExamStudentResult[];
+  questionSuccessRates: number[]; // Yüzde başarı oranı (0..100)
+  questionAverageScores: number[]; // Soru bazlı ortalama puan
+  acquiredOutcomes: string[]; // Başarılı edinilen kazanımlar (>= %50)
+  unacquiredOutcomes: string[]; // Telafi gerektiren eksik kazanımlar (< %50)
+  classAverage: number;
+  highestScore: number;
+  lowestScore: number;
+  passingCount: number; // >= 50 alan sayısı
+  failingCount: number; // < 50 alan sayısı
+  actionPlan?: string; // Telafi eylem planı
+  updatedAt: string;
+}
+
+export interface PerformanceTaskItem {
+  id: string;
+  title: string;
+  gradeLevel: GradeLevel;
+  themeUnit: string;
+  academicYear: string;
+  term: '1. Dönem' | '2. Dönem';
+  description: string;
+  objective: string;
+  steps: string[];
+  submissionFormat: string;
+  deadlineWeeks: number;
+  rubricCriteria: {
+    title: string;
+    points: number;
+    description: string;
+  }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DepartmentMinutesItem {
+  id: string;
+  meetingType: 'DÖNEM_BASI_1' | 'DÖNEM_BASI_2' | 'DÖNEM_SONU';
+  title: string;
+  academicYear: string;
+  meetingDate: string;
+  meetingPlace: string;
+  agendaItems: string[];
+  decisions: string[];
+  attendees: {
+    name: string;
+    title: string;
+  }[];
+  principalName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

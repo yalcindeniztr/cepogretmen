@@ -13,7 +13,7 @@ import {
   PageOrientation
 } from 'docx';
 import { saveAs } from 'file-saver';
-import { PlanItem, AppSettings, EvaluationScale, ExamPaper } from '../../core/types';
+import { PlanItem, AppSettings, EvaluationScale, ExamPaper, ExamItemAnalysis, PerformanceTaskItem, DepartmentMinutesItem } from '../../core/types';
 
 export class DocxExportService {
   /**
@@ -1655,6 +1655,399 @@ export class DocxExportService {
 
     const blob = await Packer.toBlob(doc);
     const fileName = `${settings.schoolName}_Tarih_${exam.gradeLevel}Sinif_${exam.term.replace(/\s+/g, '')}_${exam.examNumber.replace(/\s+/g, '')}_Cevap_Anahtari.docx`;
+    saveAs(blob, fileName);
+  }
+
+  /**
+   * MEB Resmi Sınav Soru ve Kazanım Analiz Tutanağı (.docx - A4 Yatay)
+   */
+  static async exportExamAnalysisToWord(exam: ExamPaper, analysis: ExamItemAnalysis, settings: AppSettings): Promise<void> {
+    const thinBorder = {
+      top: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      left: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      right: { style: BorderStyle.SINGLE, size: 1, color: '888888' }
+    };
+
+    const headerBorder = {
+      top: { style: BorderStyle.SINGLE, size: 2, color: '003366' },
+      bottom: { style: BorderStyle.SINGLE, size: 2, color: '003366' },
+      left: { style: BorderStyle.SINGLE, size: 1, color: '003366' },
+      right: { style: BorderStyle.SINGLE, size: 1, color: '003366' }
+    };
+
+    // 1. Soru Başarı & Kazanım Analiz Tablosu
+    const questionOutcomeRows = exam.questions.map((q, idx) => {
+      const successRate = analysis.questionSuccessRates[idx] || 0;
+      const isAcquired = successRate >= 50;
+      const avgScore = (analysis.questionAverageScores[idx] || 0).toFixed(1);
+
+      return new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 6, type: WidthType.PERCENTAGE },
+            borders: thinBorder,
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `S${q.questionNumber}`, bold: true, size: 17 })] })]
+          }),
+          new TableCell({
+            width: { size: 38, type: WidthType.PERCENTAGE },
+            borders: thinBorder,
+            children: [new Paragraph({ children: [new TextRun({ text: q.learningOutcome, size: 16 })] })]
+          }),
+          new TableCell({
+            width: { size: 12, type: WidthType.PERCENTAGE },
+            borders: thinBorder,
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${q.difficulty} (${q.maxPoints} P)`, bold: true, size: 16 })] })]
+          }),
+          new TableCell({
+            width: { size: 14, type: WidthType.PERCENTAGE },
+            borders: thinBorder,
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${avgScore} / ${q.maxPoints}`, bold: true, size: 16 })] })]
+          }),
+          new TableCell({
+            width: { size: 14, type: WidthType.PERCENTAGE },
+            borders: thinBorder,
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `%${successRate}`, bold: true, size: 17, color: isAcquired ? '008000' : 'C00000' })] })]
+          }),
+          new TableCell({
+            width: { size: 16, type: WidthType.PERCENTAGE },
+            borders: thinBorder,
+            shading: { fill: isAcquired ? 'E8F5E9' : 'FFEBEE' },
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: isAcquired ? 'Edinildi' : 'Kritik Eksik (Telafi)', bold: true, size: 16, color: isAcquired ? '2E7D32' : 'C62828' })] })]
+          })
+        ]
+      });
+    });
+
+    const questionTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          tableHeader: true,
+          children: [
+            new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: headerBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Soru', bold: true, color: 'FFFFFF', size: 17 })] })] }),
+            new TableCell({ width: { size: 38, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: headerBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Öğrenme Çıktısı (Kazanım)', bold: true, color: 'FFFFFF', size: 17 })] })] }),
+            new TableCell({ width: { size: 12, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: headerBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Zorluk / Puan', bold: true, color: 'FFFFFF', size: 17 })] })] }),
+            new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: headerBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sınıf Ort.', bold: true, color: 'FFFFFF', size: 17 })] })] }),
+            new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: headerBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Başarı %', bold: true, color: 'FFFFFF', size: 17 })] })] }),
+            new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: headerBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Edinilme Durumu', bold: true, color: 'FFFFFF', size: 17 })] })] })
+          ]
+        }),
+        ...questionOutcomeRows
+      ]
+    });
+
+    // 2. Öğrenci Not Listesi Tablosu
+    const studentRows = analysis.students.map((st, sIdx) => {
+      const isPass = st.totalScore >= 50;
+      return new TableRow({
+        children: [
+          new TableCell({ width: { size: 4, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${sIdx + 1}`, size: 15 })] })] }),
+          new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: st.studentNo, size: 15, bold: true })] })] }),
+          new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: st.studentName, size: 15, bold: true })] })] }),
+          ...exam.questions.map((_, qIdx) => {
+            const score = st.questionScores[qIdx] ?? 0;
+            return new TableCell({
+              width: { size: 5, type: WidthType.PERCENTAGE },
+              borders: thinBorder,
+              children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${score}`, size: 15 })] })]
+            });
+          }),
+          new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, borders: thinBorder, shading: { fill: isPass ? 'E8F5E9' : 'FFEBEE' }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${st.totalScore}`, bold: true, size: 16, color: isPass ? '2E7D32' : 'C62828' })] })] }),
+          new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: isPass ? 'GEÇTİ' : 'KALDI', bold: true, size: 15, color: isPass ? '2E7D32' : 'C62828' })] })] })
+        ]
+      });
+    });
+
+    const studentScoreTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          tableHeader: true,
+          children: [
+            new TableCell({ width: { size: 4, type: WidthType.PERCENTAGE }, shading: { fill: '003366' }, borders: headerBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sıra', bold: true, color: 'FFFFFF', size: 16 })] })] }),
+            new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, shading: { fill: '003366' }, borders: headerBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, color: 'FFFFFF', size: 16 })] })] }),
+            new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, shading: { fill: '003366' }, borders: headerBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Öğrenci Adı Soyadı', bold: true, color: 'FFFFFF', size: 16 })] })] }),
+            ...exam.questions.map((q) =>
+              new TableCell({
+                width: { size: 5, type: WidthType.PERCENTAGE },
+                shading: { fill: '003366' },
+                borders: headerBorder,
+                children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `S${q.questionNumber}`, bold: true, color: 'FFFFFF', size: 15 })] })]
+              })
+            ),
+            new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, shading: { fill: '003366' }, borders: headerBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Toplam', bold: true, color: 'FFFFFF', size: 16 })] })] }),
+            new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, shading: { fill: '003366' }, borders: headerBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sonuç', bold: true, color: 'FFFFFF', size: 16 })] })] })
+          ]
+        }),
+        ...studentRows
+      ]
+    });
+
+    // 3. İstatistik & Telafi Özeti Tablosu
+    const statsTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              borders: thinBorder,
+              shading: { fill: 'F9FAFB' },
+              children: [
+                new Paragraph({ children: [new TextRun({ text: 'SINIF BAŞARI İSTATİSTİKLERİ', bold: true, size: 18, color: '003366' })] }),
+                new Paragraph({ children: [new TextRun({ text: `• Sınava Katılan Öğrenci: `, bold: true, size: 16 }), new TextRun({ text: `${analysis.students.length} Kişi`, size: 16 })] }),
+                new Paragraph({ children: [new TextRun({ text: `• Sınıf Başarı Ortalaması: `, bold: true, size: 16 }), new TextRun({ text: `${analysis.classAverage.toFixed(1)} Puan`, bold: true, size: 16, color: '0066CC' })] }),
+                new Paragraph({ children: [new TextRun({ text: `• En Yüksek Not: `, bold: true, size: 16 }), new TextRun({ text: `${analysis.highestScore} Puan`, size: 16 })] }),
+                new Paragraph({ children: [new TextRun({ text: `• En Düşük Not: `, bold: true, size: 16 }), new TextRun({ text: `${analysis.lowestScore} Puan`, size: 16 })] }),
+                new Paragraph({ children: [new TextRun({ text: `• Başarılı (>=50): `, bold: true, size: 16 }), new TextRun({ text: `${analysis.passingCount} (%${((analysis.passingCount / (analysis.students.length || 1)) * 100).toFixed(0)})`, size: 16, color: '008000' })] }),
+                new Paragraph({ children: [new TextRun({ text: `• Başarısız (<50): `, bold: true, size: 16 }), new TextRun({ text: `${analysis.failingCount} (%${((analysis.failingCount / (analysis.students.length || 1)) * 100).toFixed(0)})`, size: 16, color: 'C00000' })] })
+              ]
+            }),
+            new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              borders: thinBorder,
+              shading: { fill: 'F9FAFB' },
+              children: [
+                new Paragraph({ children: [new TextRun({ text: 'KAZANIM TELAFİ VE EYLEM PLANI', bold: true, size: 18, color: 'C00000' })] }),
+                new Paragraph({ children: [new TextRun({ text: 'Edinilemeyen / Kritik Eksik Kazanımlar (<%50):', bold: true, size: 16, color: 'C00000' })] }),
+                ...(analysis.unacquiredOutcomes.length > 0
+                  ? analysis.unacquiredOutcomes.map(o => new Paragraph({ children: [new TextRun({ text: `⚠️ ${o}`, size: 15, color: 'B71C1C' })] }))
+                  : [new Paragraph({ children: [new TextRun({ text: 'Tüm sorular/kazanımlar %50 üzeri başarıyla edinilmiştir.', size: 15, color: '2E7D32', italics: true })] })]),
+                new Paragraph({ text: '' }),
+                new Paragraph({ children: [new TextRun({ text: 'Öğretmen Telafi Tedbiri:', bold: true, size: 16, color: '003366' })] }),
+                new Paragraph({ children: [new TextRun({ text: analysis.actionPlan || 'Kritik eksik görülen öğrenme çıktıları sonraki ders saatlerinde soru-cevap ve kaynak metin tahlili ile telafi edilecektir.', size: 15, italics: true })] })
+              ]
+            })
+          ]
+        })
+      ]
+    });
+
+    // 4. İmza Tablosu
+    const signatureTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [
+                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${settings.teacherName}`, bold: true, size: 20 })] }),
+                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tarih Dersi Öğretmeni', size: 18 })] }),
+                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'İmza: ...........................', size: 17 })] })
+              ]
+            }),
+            new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [
+                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${settings.principalName}`, bold: true, size: 20 })] }),
+                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Okul Müdürü', size: 18 })] }),
+                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'İmza / Mühür: ...........................', size: 17 })] })
+              ]
+            })
+          ]
+        })
+      ]
+    });
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: {
+            page: {
+              size: { orientation: PageOrientation.LANDSCAPE },
+              margin: { top: 720, bottom: 720, left: 720, right: 720 }
+            }
+          },
+          children: [
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'T.C. MİLLÎ EĞİTİM BAKANLIĞI', bold: true, size: 22, color: '003366' })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: settings.schoolName.toUpperCase(), bold: true, size: 20 })] }),
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: `${exam.academicYear} EĞİTİM ÖĞRETİM YILI ${exam.term.toUpperCase()} ${exam.gradeLevel}. SINIF (${analysis.className}) TARİH DERSİ ${exam.examNumber.toUpperCase()} SINAV SORU VE KAZANIM ANALİZ FORMU`,
+                  bold: true,
+                  size: 20,
+                  color: 'C00000'
+                })
+              ]
+            }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `Sınav Kapsamı: ${exam.themeUnit} (${exam.scenario})`, italics: true, size: 16, color: '555555' })] }),
+            new Paragraph({ text: '' }),
+            new Paragraph({ children: [new TextRun({ text: '1. SORU VE ÖĞRENME ÇIKTISI (KAZANIM) BAŞARI ANALİZİ', bold: true, size: 18, color: '003366' })] }),
+            questionTable,
+            new Paragraph({ text: '' }),
+            new Paragraph({ children: [new TextRun({ text: '2. ÖĞRENCİ PUAN VE DEĞERLENDİRME ÇİZELGESİ', bold: true, size: 18, color: '003366' })] }),
+            studentScoreTable,
+            new Paragraph({ text: '' }),
+            statsTable,
+            new Paragraph({ text: '' }),
+            signatureTable
+          ]
+        }
+      ]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    const fileName = `${settings.schoolName}_Tarih_${exam.gradeLevel}Sinif_${analysis.className.replace(/[/\\s]/g, '_')}_Sinav_Analiz_Formu.docx`;
+    saveAs(blob, fileName);
+  }
+
+  /**
+   * MEB Maarif Modeli Tarih Performans Görevi ve Dereceli Rubrik (.docx)
+   */
+  static async exportPerformanceTaskToWord(task: PerformanceTaskItem, settings: AppSettings): Promise<void> {
+    const thinBorder = {
+      top: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      left: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      right: { style: BorderStyle.SINGLE, size: 1, color: '888888' }
+    };
+
+    const rubricRows = task.rubricCriteria.map((r, idx) =>
+      new TableRow({
+        children: [
+          new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${idx + 1}`, bold: true, size: 18 })] })] }),
+          new TableCell({ width: { size: 32, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: r.title, bold: true, size: 17 })] })] }),
+          new TableCell({ width: { size: 45, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: r.description, size: 16 })] })] }),
+          new TableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${r.points} Puan`, bold: true, size: 18, color: 'C00000' })] })] })
+        ]
+      })
+    );
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: { page: { size: { orientation: PageOrientation.PORTRAIT }, margin: { top: 720, bottom: 720, left: 720, right: 720 } } },
+          children: [
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'T.C. MİLLÎ EĞİTİM BAKANLIĞI', bold: true, size: 22, color: '003366' })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: settings.schoolName.toUpperCase(), bold: true, size: 20 })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${task.academicYear} ${task.term.toUpperCase()} ${task.gradeLevel}. SINIF TARİH DERSİ PERFORMANS GÖREVİ VE DERECELİ PUANLAMA ANAHTARI`, bold: true, size: 20, color: '0C8CE9' })] }),
+            new Paragraph({ text: '' }),
+            new Paragraph({ children: [new TextRun({ text: 'GÖREV BAŞLIĞI: ', bold: true, size: 18, color: '003366' }), new TextRun({ text: task.title, bold: true, size: 18 })] }),
+            new Paragraph({ children: [new TextRun({ text: 'Ünite / Öğrenme Alanı: ', bold: true, size: 16 }), new TextRun({ text: task.themeUnit, size: 16 })] }),
+            new Paragraph({ children: [new TextRun({ text: 'Görevin Amacı: ', bold: true, size: 16 }), new TextRun({ text: task.objective, size: 16 })] }),
+            new Paragraph({ children: [new TextRun({ text: 'Hazırlama Süresi: ', bold: true, size: 16 }), new TextRun({ text: `${task.deadlineWeeks} Hafta`, bold: true, size: 16 })] }),
+            new Paragraph({ children: [new TextRun({ text: 'Teslim Formatı: ', bold: true, size: 16 }), new TextRun({ text: task.submissionFormat, size: 16 })] }),
+            new Paragraph({ text: '' }),
+            new Paragraph({ children: [new TextRun({ text: 'GÖREV BASAMAKLARI VE YÖNERGE:', bold: true, size: 18, color: '003366' })] }),
+            ...task.steps.map((st, i) => new Paragraph({ children: [new TextRun({ text: `${i + 1}. `, bold: true, size: 16 }), new TextRun({ text: st, size: 16 })] })),
+            new Paragraph({ text: '' }),
+            new Paragraph({ children: [new TextRun({ text: 'DERECELİ PUANLAMA ANAHTARI (RUBRİK):', bold: true, size: 18, color: '003366' })] }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new TableRow({
+                  tableHeader: true,
+                  children: [
+                    new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, color: 'FFFFFF', size: 17 })] })] }),
+                    new TableCell({ width: { size: 32, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Değerlendirme Ölçütü', bold: true, color: 'FFFFFF', size: 17 })] })] }),
+                    new TableCell({ width: { size: 45, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Ölçüt Açıklaması', bold: true, color: 'FFFFFF', size: 17 })] })] }),
+                    new TableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Puan', bold: true, color: 'FFFFFF', size: 17 })] })] })
+                  ]
+                }),
+                ...rubricRows
+              ]
+            }),
+            new Paragraph({ text: '' }),
+            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `${settings.teacherName} • Tarih Dersi Öğretmeni`, bold: true, size: 18 })] })
+          ]
+        }
+      ]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    const fileName = `${settings.schoolName}_Tarih_${task.gradeLevel}Sinif_Performans_Gorevi.docx`;
+    saveAs(blob, fileName);
+  }
+
+  /**
+   * MEB Tarih Zümre Öğretmenler Kurulu Toplantı Tutanağı (.docx)
+   */
+  static async exportDepartmentMinutesToWord(minutes: DepartmentMinutesItem, settings: AppSettings): Promise<void> {
+    const thinBorder = {
+      top: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      left: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      right: { style: BorderStyle.SINGLE, size: 1, color: '888888' }
+    };
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: { page: { size: { orientation: PageOrientation.PORTRAIT }, margin: { top: 720, bottom: 720, left: 720, right: 720 } } },
+          children: [
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'T.C. MİLLÎ EĞİTİM BAKANLIĞI', bold: true, size: 22, color: '003366' })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: settings.schoolName.toUpperCase(), bold: true, size: 20 })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${minutes.academicYear} EĞİTİM ÖĞRETİM YILI TARİH ZÜMRE ÖĞRETMENLER KURULU TOPLANTI TUTANAĞI`, bold: true, size: 20, color: '0C8CE9' })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `(${minutes.title})`, bold: true, size: 18, color: '555555' })] }),
+            new Paragraph({ text: '' }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: 'Toplantı Tarihi & Yeri:', bold: true, size: 16 })] })] }),
+                    new TableCell({ width: { size: 75, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: `${minutes.meetingDate} - ${minutes.meetingPlace}`, size: 16 })] })] })
+                  ]
+                }),
+                new TableRow({
+                  children: [
+                    new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: 'Zümre Başkanı / Öğretmen:', bold: true, size: 16 })] })] }),
+                    new TableCell({ width: { size: 75, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: settings.teacherName, bold: true, size: 16 })] })] })
+                  ]
+                })
+              ]
+            }),
+            new Paragraph({ text: '' }),
+            new Paragraph({ children: [new TextRun({ text: 'GÜNDEM MADDELERİ:', bold: true, size: 18, color: '003366' })] }),
+            ...minutes.agendaItems.map((item, i) => new Paragraph({ children: [new TextRun({ text: `${i + 1}. `, bold: true, size: 16 }), new TextRun({ text: item, size: 16 })] })),
+            new Paragraph({ text: '' }),
+            new Paragraph({ children: [new TextRun({ text: 'GÜNDEM MADDELERİNİN GÖRÜŞÜLMESİ VE ALINAN KARARLAR:', bold: true, size: 18, color: '003366' })] }),
+            ...minutes.decisions.map((dec, i) => new Paragraph({ children: [new TextRun({ text: `Karar ${i + 1}: `, bold: true, size: 16, color: '003366' }), new TextRun({ text: dec, size: 16 })] })),
+            new Paragraph({ text: '' }),
+            new Paragraph({ text: '' }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                      children: [
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: settings.teacherName, bold: true, size: 19 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tarih Dersi Öğretmeni / Zümre Başkanı', size: 17 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'İmza: .............................', size: 16 })] })
+                      ]
+                    }),
+                    new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                      children: [
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'UYGUNDUR', bold: true, size: 18, color: '003366' })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: settings.principalName, bold: true, size: 19 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Okul Müdürü', size: 17 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'İmza / Mühür: .............................', size: 16 })] })
+                      ]
+                    })
+                  ]
+                })
+              ]
+            })
+          ]
+        }
+      ]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    const fileName = `${settings.schoolName}_Tarih_Zumre_Tutanagi_${minutes.meetingType}.docx`;
     saveAs(blob, fileName);
   }
 }

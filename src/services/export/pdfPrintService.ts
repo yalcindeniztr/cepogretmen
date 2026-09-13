@@ -1,4 +1,4 @@
-import { PlanItem, AppSettings, EvaluationScale, ExamPaper } from '../../core/types';
+import { PlanItem, AppSettings, EvaluationScale, ExamPaper, ExamItemAnalysis, PerformanceTaskItem } from '../../core/types';
 
 export class PdfPrintService {
   /**
@@ -805,6 +805,265 @@ export class PdfPrintService {
             </td>
           </tr>
         </table>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  }
+
+  /**
+   * MEB Resmi Sınav Soru ve Kazanım Analiz Tutanağı Yazdırma (A4 Yatay)
+   */
+  static printExamAnalysis(exam: ExamPaper, analysis: ExamItemAnalysis, settings: AppSettings): void {
+    const printWindow = window.open('', '_blank', 'width=1200,height=850');
+    if (!printWindow) {
+      alert('Yazdırma penceresi açılamadı. Lütfen tarayıcınızın pop-up engelleyicisini kapatın.');
+      return;
+    }
+
+    const questionOutcomeRowsHtml = exam.questions.map((q, idx) => {
+      const rate = analysis.questionSuccessRates[idx] || 0;
+      const isAcquired = rate >= 50;
+      const avg = (analysis.questionAverageScores[idx] || 0).toFixed(1);
+      return `
+        <tr>
+          <td style="text-align:center; font-weight:bold;">S${q.questionNumber}</td>
+          <td>${q.learningOutcome}</td>
+          <td style="text-align:center;">${q.difficulty} (${q.maxPoints} P)</td>
+          <td style="text-align:center;">${avg} / ${q.maxPoints}</td>
+          <td style="text-align:center; font-weight:bold; color: ${isAcquired ? '#166534' : '#991b1b'};">%${rate}</td>
+          <td style="text-align:center; font-weight:bold; background:${isAcquired ? '#f0fdf4' : '#fef2f2'}; color:${isAcquired ? '#15803d' : '#b91c1c'};">
+            ${isAcquired ? 'Edinildi' : 'Kritik Eksik (Telafi)'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const studentRowsHtml = analysis.students.map((st, sIdx) => {
+      const isPass = st.totalScore >= 50;
+      return `
+        <tr>
+          <td style="text-align:center;">${sIdx + 1}</td>
+          <td style="text-align:center; font-weight:bold;">${st.studentNo}</td>
+          <td><strong>${st.studentName}</strong></td>
+          ${exam.questions.map((_, qIdx) => `<td style="text-align:center;">${st.questionScores[qIdx] ?? 0}</td>`).join('')}
+          <td style="text-align:center; font-weight:bold; background:${isPass ? '#f0fdf4' : '#fef2f2'}; color:${isPass ? '#15803d' : '#b91c1c'};">${st.totalScore}</td>
+          <td style="text-align:center; font-weight:bold; color:${isPass ? '#15803d' : '#b91c1c'};">${isPass ? 'GEÇTİ' : 'KALDI'}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="tr">
+      <head>
+        <meta charset="UTF-8">
+        <title>${settings.schoolName} - ${analysis.className} Sınav Analiz Tutanağı</title>
+        <style>
+          @page { size: A4 landscape; margin: 8mm; }
+          * { box-sizing: border-box; font-family: 'Times New Roman', Times, serif; }
+          body { margin: 0; padding: 5px; color: #000; font-size: 8.5pt; line-height: 1.25; }
+          .header-box { text-align: center; margin-bottom: 6px; border-bottom: 2px solid #003366; padding-bottom: 3px; }
+          .header-box h2 { margin: 1px 0; font-size: 11pt; font-weight: bold; color: #003366; }
+          .header-box h3 { margin: 1px 0; font-size: 9.5pt; color: #0c8ce9; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+          th, td { border: 1px solid #444; padding: 3px 5px; vertical-align: middle; }
+          th { background-color: #0c8ce9; color: white; text-align: center; font-size: 8pt; }
+          .stat-card { border: 1px solid #cbd5e1; background: #f8fafc; padding: 6px 10px; border-radius: 4px; font-size: 8pt; }
+          .no-print { margin-bottom: 8px; padding: 6px 10px; background: #e0f2fe; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+          @media print {
+            .no-print { display: none; }
+            body { padding: 0; }
+            tr { page-break-inside: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="no-print">
+          <span><strong>MEB Sınav Soru ve Kazanım Analiz Tutanağı:</strong> A4 Yatay baskı formatı.</span>
+          <button onclick="window.print()" style="background: #0c8ce9; color: white; border: none; padding: 5px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+            🖨️ Yazdır / PDF Kaydet
+          </button>
+        </div>
+
+        <div class="header-box">
+          <h2>T.C. MİLLÎ EĞİTİM BAKANLIĞI - ${settings.schoolName.toUpperCase()}</h2>
+          <h3>${exam.academicYear} EĞİTİM ÖĞRETİM YILI ${exam.term.toUpperCase()} ${exam.gradeLevel}. SINIF (${analysis.className}) TARİH DERSİ ${exam.examNumber.toUpperCase()} SINAV SORU VE KAZANIM ANALİZ FORMU</h3>
+          <div style="font-size: 8pt; color: #555;">Sınav Kapsamı: ${exam.themeUnit} (${exam.scenario})</div>
+        </div>
+
+        <div style="font-weight: bold; color: #003366; margin-bottom: 3px;">1. Soru ve Öğrenme Çıktısı (Kazanım) Başarı Analizi</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 5%;">Soru</th>
+              <th style="width: 45%;">Öğrenme Çıktısı (Kazanım Kodu & Adı)</th>
+              <th style="width: 12%;">Zorluk / Puan</th>
+              <th style="width: 12%;">Sınıf Ort.</th>
+              <th style="width: 12%;">Başarı %</th>
+              <th style="width: 14%;">Durum</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${questionOutcomeRowsHtml}
+          </tbody>
+        </table>
+
+        <div style="font-weight: bold; color: #003366; margin-bottom: 3px;">2. Öğrenci Puan Çizelgesi (Sınıf Listesi)</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 4%;">Sıra</th>
+              <th style="width: 8%;">No</th>
+              <th style="width: 24%;">Öğrenci Adı Soyadı</th>
+              ${exam.questions.map(q => `<th style="width: 5%;">S${q.questionNumber}</th>`).join('')}
+              <th style="width: 7%;">Toplam</th>
+              <th style="width: 7%;">Durum</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${studentRowsHtml}
+          </tbody>
+        </table>
+
+        <table style="border: none; margin-top: 6px;">
+          <tr>
+            <td style="width: 50%; border: 1px solid #cbd5e1; background: #f8fafc; padding: 6px; vertical-align: top;">
+              <strong style="color: #003366;">SINIF BAŞARI İSTATİSTİKLERİ</strong><br>
+              • Sınava Katılan: ${analysis.students.length} Öğrenci<br>
+              • Sınıf Ortalaması: <strong>${analysis.classAverage.toFixed(1)} Puan</strong><br>
+              • En Yüksek / En Düşük Not: ${analysis.highestScore} / ${analysis.lowestScore}<br>
+              • Başarılı Sayısı (>=50): ${analysis.passingCount} (%${((analysis.passingCount / (analysis.students.length || 1)) * 100).toFixed(0)})<br>
+              • Başarısız Sayısı (<50): ${analysis.failingCount} (%${((analysis.failingCount / (analysis.students.length || 1)) * 100).toFixed(0)})
+            </td>
+            <td style="width: 50%; border: 1px solid #cbd5e1; background: #f8fafc; padding: 6px; vertical-align: top;">
+              <strong style="color: #b91c1c;">KAZANIM TELAFİ VE EYLEM PLANI</strong><br>
+              <strong>Kritik Eksik Kazanımlar (<%50):</strong><br>
+              ${analysis.unacquiredOutcomes.length > 0 ? analysis.unacquiredOutcomes.map(o => `• <span style="color: #b91c1c;">${o}</span><br>`).join('') : '<em>Tüm kazanımlar %50 barajını aşmıştır.</em><br>'}
+              <strong style="color: #003366; margin-top: 3px; display:inline-block;">Öğretmen Telafi Tedbiri:</strong><br>
+              <em>${analysis.actionPlan || 'Kritik eksik görülen öğrenme çıktıları sonraki ders saatlerinde kaynak metin tahlili ve soru-cevap ile pekiştirilecektir.'}</em>
+            </td>
+          </tr>
+        </table>
+
+        <table style="border: none; margin-top: 15px;">
+          <tr>
+            <td style="border: none; text-align: center; width: 50%;">
+              <strong>${settings.teacherName}</strong><br>
+              Tarih Dersi Öğretmeni<br><br>
+              İmza: .......................................
+            </td>
+            <td style="border: none; text-align: center; width: 50%;">
+              <strong>UYGUNDUR</strong><br>
+              ${new Date().toLocaleDateString('tr-TR')}<br>
+              <strong>${settings.principalName}</strong><br>
+              Okul Müdürü<br><br>
+              Mühür / İmza: .......................................
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  }
+
+  /**
+   * MEB Maarif Tarih Performans Görevi ve Rubrik Yazdırma (A4 Dikey)
+   */
+  static printPerformanceTask(task: PerformanceTaskItem, settings: AppSettings): void {
+    const printWindow = window.open('', '_blank', 'width=1000,height=800');
+    if (!printWindow) {
+      alert('Yazdırma penceresi açılamadı. Lütfen tarayıcınızın pop-up engelleyicisini kapatın.');
+      return;
+    }
+
+    const rubricRowsHtml = task.rubricCriteria.map((r, i) => `
+      <tr>
+        <td style="text-align: center; font-weight: bold;">${i + 1}</td>
+        <td><strong>${r.title}</strong></td>
+        <td>${r.description}</td>
+        <td style="text-align: center; font-weight: bold; color: #b91c1c;">${r.points} Puan</td>
+      </tr>
+    `).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="tr">
+      <head>
+        <meta charset="UTF-8">
+        <title>${settings.schoolName} - ${task.gradeLevel}. Sınıf Performans Görevi</title>
+        <style>
+          @page { size: A4 portrait; margin: 10mm; }
+          * { box-sizing: border-box; font-family: 'Times New Roman', Times, serif; }
+          body { margin: 0; padding: 5px; color: #000; font-size: 9.5pt; line-height: 1.3; }
+          .header-box { text-align: center; margin-bottom: 8px; border-bottom: 2px solid #003366; padding-bottom: 4px; }
+          .header-box h2 { margin: 1px 0; font-size: 12pt; font-weight: bold; color: #003366; }
+          .header-box h3 { margin: 1px 0; font-size: 10pt; color: #0c8ce9; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+          th, td { border: 1px solid #444; padding: 4px 6px; }
+          th { background-color: #0c8ce9; color: white; text-align: center; }
+          .no-print { margin-bottom: 10px; padding: 6px 12px; background: #e0f2fe; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+          @media print { .no-print { display: none; } body { padding: 0; } }
+        </style>
+      </head>
+      <body>
+        <div class="no-print">
+          <span><strong>Öğrenci Performans Görevi ve Rubrik Kağıdı:</strong> A4 Dikey formatı.</span>
+          <button onclick="window.print()" style="background: #0c8ce9; color: white; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer;">
+            🖨️ Yazdır / PDF Kaydet
+          </button>
+        </div>
+
+        <div class="header-box">
+          <h2>T.C. MİLLÎ EĞİTİM BAKANLIĞI - ${settings.schoolName.toUpperCase()}</h2>
+          <h3>${task.academicYear} ${task.term.toUpperCase()} ${task.gradeLevel}. SINIF TARİH DERSİ PERFORMANS GÖREVİ VE DERECELİ PUANLAMA ANAHTARI</h3>
+        </div>
+
+        <table style="margin-bottom: 10px;">
+          <tr>
+            <td style="width: 50%;"><strong>ÖĞRENCİ ADI SOYADI:</strong> ...........................................................</td>
+            <td style="width: 25%;"><strong>SINIFI / ŞUBESİ:</strong> ${task.gradeLevel} / .........</td>
+            <td style="width: 25%;"><strong>NO:</strong> ..............</td>
+          </tr>
+        </table>
+
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; margin-bottom: 10px;">
+          <div><strong>GÖREV BAŞLIĞI:</strong> ${task.title}</div>
+          <div><strong>Ünite / Öğrenme Alanı:</strong> ${task.themeUnit}</div>
+          <div><strong>Görevin Amacı:</strong> ${task.objective}</div>
+          <div><strong>Hazırlama Süresi & Format:</strong> ${task.deadlineWeeks} Hafta • ${task.submissionFormat}</div>
+        </div>
+
+        <div style="font-weight: bold; color: #003366; margin-bottom: 4px;">GÖREV BASAMAKLARI VE YÖNERGE:</div>
+        <ol style="margin-top: 0; padding-left: 20px;">
+          ${task.steps.map(s => `<li>${s}</li>`).join('')}
+        </ol>
+
+        <div style="font-weight: bold; color: #003366; margin-bottom: 4px;">DERECELİ PUANLAMA ANAHTARI (RUBRİK):</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 6%;">No</th>
+              <th style="width: 28%;">Ölçüt</th>
+              <th style="width: 50%;">Açıklama</th>
+              <th style="width: 16%;">Puan</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rubricRowsHtml}
+          </tbody>
+        </table>
+
+        <div style="margin-top: 20px; text-align: right; font-weight: bold;">
+          ${settings.teacherName} • Tarih Dersi Öğretmeni
+        </div>
       </body>
       </html>
     `;
