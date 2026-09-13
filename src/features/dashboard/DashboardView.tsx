@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Calendar,
   FileText,
@@ -18,7 +18,11 @@ import {
   ChevronRight,
   BookOpen,
   Award,
-  Layers
+  Layers,
+  Archive,
+  Search,
+  CheckCircle2,
+  Loader2
 } from 'lucide-react';
 import { AppSettings, PlanItem, LibraryItem, EvaluationScale, MebCalendarReminder, ExamPaper } from '../../core/types';
 import { HoloSquareCard } from '../../components/3d/HoloSquareCard';
@@ -26,6 +30,9 @@ import { EmbossedButton } from '../../components/3d/EmbossedButton';
 import { SpeechService } from '../../services/speech/speechService';
 import { ActiveTab } from '../../components/common/Navbar';
 import { DepartmentMinutesModal } from '../documents/DepartmentMinutesModal';
+import { CommandPalette } from '../../components/common/CommandPalette';
+import { JarvisBriefingModal } from '../../components/speech/JarvisBriefingModal';
+import { PortfolioZipService } from '../../services/export/portfolioZipService';
 
 interface DashboardViewProps {
   settings: AppSettings;
@@ -36,6 +43,7 @@ interface DashboardViewProps {
   exams?: ExamPaper[];
   onNavigate: (tab: ActiveTab) => void;
   onSelectPlan: (plan: PlanItem) => void;
+  onOpenCommandPalette?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -46,35 +54,55 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   reminders,
   exams = [],
   onNavigate,
-  onSelectPlan
+  onSelectPlan,
+  onOpenCommandPalette
 }) => {
-  const yearlyPlans = plans.filter(p => p.type === 'YEARLY');
-  const dailyPlans = plans.filter(p => p.type === 'DAILY');
-  const [isMinutesModalOpen, setIsMinutesModalOpen] = React.useState(false);
+  const yearlyPlans = plans.filter((p) => p.type === 'YEARLY');
+  const dailyPlans = plans.filter((p) => p.type === 'DAILY');
+
+  // Modals state
+  const [isMinutesModalOpen, setIsMinutesModalOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isJarvisModalOpen, setIsJarvisModalOpen] = useState(false);
+  const [isExportingZip, setIsExportingZip] = useState(false);
+  const [zipProgress, setZipProgress] = useState<string | null>(null);
 
   const speakReminder = (reminder: MebCalendarReminder) => {
     const speechText = `Hatırlatma: ${reminder.title}. Tarih: ${reminder.dateStr}. ${reminder.description} Yapılması gereken işlem: ${reminder.actionRequired}`;
     SpeechService.speak(speechText);
   };
 
+  const handleExportZip = async () => {
+    if (isExportingZip) return;
+    try {
+      setIsExportingZip(true);
+      setZipProgress('Zümre belgeleri hazırlanıyor...');
+      await PortfolioZipService.exportFullPortfolioZip(settings, '2024-2025', (status) => {
+        setZipProgress(status);
+      });
+      setTimeout(() => {
+        setIsExportingZip(false);
+        setZipProgress(null);
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+      alert('Zümre paketi zip olarak oluşturulurken bir hata oluştu.');
+      setIsExportingZip(false);
+      setZipProgress(null);
+    }
+  };
+
+  // Determine smart pulse badges based on calendar and counts
+  const hasUrgentExam = reminders.some((r) => r.isUrgent && r.title.toLowerCase().includes('sınav'));
+  const hasUrgentMinutes = reminders.some((r) => r.title.toLowerCase().includes('zümre'));
+
   return (
     <div className="space-y-8 pb-12">
-      {/* 1. Hoş Geldiniz & Hızlı Eylem Banner'ı (2. Resimdeki Üst Bölüm) */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-maarif-950 via-maarif-900 to-sky-900 text-white p-6 sm:p-8 shadow-[0_14px_35px_rgba(12,140,233,0.35)] border border-white/20">
-        <div className="relative z-10 max-w-4xl">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold text-sky-200 mb-3.5 border border-white/20 shadow-sm">
-            <ShieldCheck className="w-4 h-4 text-sky-300" />
-            <span>Türkiye Yüzyılı Maarif Modeli Resmi Uyumlu</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
-            Hoş Geldiniz, {settings.teacherName}
-          </h1>
-          <p className="mt-2 text-sm sm:text-base text-sky-100/90 leading-relaxed max-w-3xl">
-            <strong>{settings.schoolName}</strong> bünyesinde 9, 10, 11 ve 12. sınıf Tarih dersleri için Maarif Modeli esaslarına göre yıllık ve günlük ders planlarınızı hazırlayabilir, resmi tablolarla Word ve PDF çıktıları alabilirsiniz.
-          </p>
-
-          {/* Hızlı Erişim Eylem Butonları */}
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+      {/* 1. KULLANICI İSTEĞİ: YAZILAR TAMAMEN KALDIRILDI -> 3D KABARTMA PARILTILI BUTON DOCK'U */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-maarif-950 via-maarif-900 to-sky-950 p-5 sm:p-6 shadow-[0_12px_35px_rgba(12,140,233,0.3)] border border-white/20">
+        <div className="relative z-10">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Yıllık Plan Hazırla (Amber/Gold) */}
             <EmbossedButton
               variant="warning"
               size="md"
@@ -83,6 +111,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             >
               Yıllık Plan Hazırla
             </EmbossedButton>
+
+            {/* Günlük Ders Planı (Zümrüt Yeşil) */}
             <EmbossedButton
               variant="success"
               size="md"
@@ -91,6 +121,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             >
               Günlük Ders Planı
             </EmbossedButton>
+
+            {/* Açık Uçlu Sınav Hazırla (Yakut Kırmızı) */}
             <EmbossedButton
               variant="danger"
               size="md"
@@ -99,6 +131,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             >
               Açık Uçlu Sınav Hazırla
             </EmbossedButton>
+
+            {/* Zümre Karar Tutanağı (Gök Mavi) */}
             <EmbossedButton
               variant="primary"
               size="md"
@@ -107,20 +141,89 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             >
               Zümre Karar Tutanağı
             </EmbossedButton>
+
+            {/* Maarif Asistanı ile Konuş (Ametist Mor) */}
             <EmbossedButton
               variant="purple"
               size="md"
               icon={<Bot className="w-4 h-4" />}
-              onClick={() => onNavigate('assistant')}
+              onClick={() => setIsJarvisModalOpen(true)}
             >
               Maarif Asistanı ile Konuş
             </EmbossedButton>
+
+            {/* Kütüphane & Kitaplar */}
+            <button
+              onClick={() => onNavigate('library')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 shadow-[0_4px_14px_rgba(245,158,11,0.35),inset_0_1px_0_rgba(255,255,255,0.4)] border border-amber-400/40 active:scale-95 transition-all cursor-pointer"
+            >
+              <Library className="w-4 h-4" />
+              <span>Kütüphane & Kitaplar</span>
+            </button>
+
+            {/* Ölçme & Değerlendirme */}
+            <button
+              onClick={() => onNavigate('scales')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-[0_4px_14px_rgba(168,85,247,0.35),inset_0_1px_0_rgba(255,255,255,0.4)] border border-purple-400/40 active:scale-95 transition-all cursor-pointer"
+            >
+              <Scale className="w-4 h-4" />
+              <span>Ölçme & Değerlendirme</span>
+            </button>
+
+            {/* Kurum & Ayarlar */}
+            <button
+              onClick={() => onNavigate('settings')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-slate-200 bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 shadow-[0_4px_14px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] border border-slate-600/50 active:scale-95 transition-all cursor-pointer"
+            >
+              <Settings className="w-4 h-4" />
+              <span>Kurum & Ayarlar</span>
+            </button>
+
+            {/* 4. MADDE: TEK TIKLA ZÜMRE PAKETİ İNDİR (.ZIP) */}
+            <button
+              onClick={handleExportZip}
+              disabled={isExportingZip}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 shadow-[0_4px_14px_rgba(6,182,212,0.4),inset_0_1px_0_rgba(255,255,255,0.4)] border border-cyan-400/40 active:scale-95 transition-all cursor-pointer disabled:opacity-75"
+            >
+              {isExportingZip ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Paketleniyor...</span>
+                </>
+              ) : (
+                <>
+                  <Archive className="w-4 h-4" />
+                  <span>Zümre Paketi İndir (.ZIP)</span>
+                </>
+              )}
+            </button>
+
+            {/* 1. MADDE: HIZLI ARAMA & KOMUT PALETİ (Ctrl + K) BUTONU */}
+            <button
+              onClick={() => (onOpenCommandPalette ? onOpenCommandPalette() : setIsCommandPaletteOpen(true))}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-sky-200 bg-white/10 hover:bg-white/20 backdrop-blur-md shadow-inner border border-white/20 active:scale-95 transition-all cursor-pointer ml-auto"
+              title="Hızlı Komut Paleti (Ctrl+K)"
+            >
+              <Search className="w-4 h-4 text-sky-300" />
+              <span>Hızlı Ara</span>
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-white/20 rounded text-white border border-white/30">
+                Ctrl+K
+              </kbd>
+            </button>
           </div>
+
+          {/* Zip Progress Indicator */}
+          {zipProgress && (
+            <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-cyan-200 bg-cyan-950/60 px-3 py-1.5 rounded-lg border border-cyan-500/30 animate-pulse">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>{zipProgress}</span>
+            </div>
+          )}
         </div>
 
         {/* Ambient Hologram Glow Lighting */}
-        <div className="absolute -right-16 -bottom-16 w-96 h-96 bg-sky-400/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute right-32 top-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -right-16 -bottom-16 w-80 h-80 bg-sky-400/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute right-36 top-0 w-44 h-44 bg-indigo-500/15 rounded-full blur-2xl pointer-events-none" />
       </div>
 
       {/* 2. KARE 3D KABARTMA HOLOGRAM PARILTILI GÖLGELİ KESKİN KENARLI KUTULAR (8 Kategori & Bölüm) */}
@@ -139,9 +242,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </p>
             </div>
           </div>
-          <span className="hidden sm:inline-flex text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-200/80 text-slate-700 border border-slate-300">
-            8 Aktif Bölüm
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsJarvisModalOpen(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-800 border border-purple-300 hover:shadow-xs transition-all cursor-pointer"
+            >
+              <Bot className="w-3.5 h-3.5 text-purple-600" />
+              <span>Jarvis Brifingi</span>
+            </button>
+            <span className="hidden sm:inline-flex text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-200/80 text-slate-700 border border-slate-300">
+              8 Aktif Bölüm
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3.5 sm:gap-5">
@@ -151,6 +263,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             value={yearlyPlans.length > 0 ? `${yearlyPlans.length} Plan` : '2 Dönemli'}
             subtitle="9-12. Sınıf MEB takvimi & planlar"
             badgeText="2 Dönemli"
+            pulseBadge={yearlyPlans.length > 0 ? 'Aktif Plan' : undefined}
             icon={<Calendar className="w-5 h-5" />}
             variant="blue"
             actionText="Planları Aç"
@@ -169,12 +282,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => onNavigate('daily')}
           />
 
-          {/* 3. Açık Uçlu Sınavlar */}
+          {/* 3. Açık Uçlu Sınavlar (Akıllı Sınav Bildirim Rozeti Destekli) */}
           <HoloSquareCard
             title="AÇIK UÇLU SINAVLAR"
             value={exams.length > 0 ? `${exams.length} Sınav` : '100 Puan'}
             subtitle="10 soruluk açık uçlu & dereceli rubrik"
             badgeText="Yeni Ölçme"
+            pulseBadge={hasUrgentExam ? 'Sınav Haftası!' : undefined}
             icon={<FileCheck className="w-5 h-5" />}
             variant="crimson"
             actionText="Sınav Hazırla"
@@ -205,16 +319,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => onNavigate('scales')}
           />
 
-          {/* 6. Maarif Asistanı */}
+          {/* 6. Maarif Jarvis Asistanı */}
           <HoloSquareCard
             title="MAARİF ASİSTANI"
-            value="AI Tarih"
+            value="Jarvis AI"
             subtitle="Tarih öğretmeni uzman yapay zeka rehberi"
-            badgeText="Akıllı Sohbet"
+            badgeText="Sesli Brifing"
+            pulseBadge="Jarvis Aktif"
             icon={<Bot className="w-5 h-5" />}
             variant="indigo"
-            actionText="Asistanla Konuş"
-            onClick={() => onNavigate('assistant')}
+            actionText="Asistanı Başlat"
+            onClick={() => setIsJarvisModalOpen(true)}
           />
 
           {/* 7. Zümre Karar Tutanağı */}
@@ -223,6 +338,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             value="12 Madde"
             subtitle="1-2. Dönem ve sene sonu resmi tutanak"
             badgeText="MEB Formatı"
+            pulseBadge={hasUrgentMinutes ? 'Zümre Dönemi' : undefined}
             icon={<Users className="w-5 h-5" />}
             variant="cyan"
             actionText="Düzenle & İndir"
@@ -331,7 +447,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 Henüz kayıtlı plan yok.
                 <button
                   onClick={() => onNavigate('yearly')}
-                  className="mt-2 block mx-auto text-xs font-bold text-sky-600 hover:underline"
+                  className="mt-2 block mx-auto text-xs font-bold text-sky-600 hover:underline cursor-pointer"
                 >
                   Yeni Plan Oluştur
                 </button>
@@ -464,28 +580,62 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
             </div>
 
-            {/* Okul Temelli & Sosyal Etkinlik Kılavuzu */}
-            <div className="p-3 rounded-xl bg-white/90 border border-slate-200 text-slate-700 text-xs flex items-center justify-between">
-              <div>
-                <div className="font-bold text-slate-900 text-[11px]">Sosyal & Okul Temelli Plan</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">Yıllık plana entegre modüller</div>
+            {/* ZIP Paketi Hızlı İndir Butonu */}
+            <div className="p-3 rounded-xl bg-gradient-to-r from-sky-50 to-indigo-50 border border-sky-200 text-slate-800 text-xs flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-sky-900 text-[11px] flex items-center gap-1">
+                  <Archive className="w-3.5 h-3.5 text-sky-600" />
+                  Tam Zümre Dosyası (.ZIP)
+                </span>
+                <span className="text-[10px] font-bold text-sky-600">Tek Tıkla</span>
               </div>
+              <p className="text-[10px] text-slate-600">
+                Tüm yıllık planlar, zümre tutanağı ve teslim dizi pusulası arşivde toplanır.
+              </p>
               <button
-                onClick={() => onNavigate('yearly')}
-                className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                onClick={handleExportZip}
+                disabled={isExportingZip}
+                className="w-full py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-75"
               >
-                Git →
+                {isExportingZip ? <Loader2 className="w-3 h-3 animate-spin" /> : <Archive className="w-3 h-3" />}
+                <span>{isExportingZip ? 'İndiriliyor...' : 'ZIP Olarak İndir'}</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Zümre Tutanağı Modalı */}
+      {/* 4. MODALLER (Zümre Tutanağı, Komut Paleti, Jarvis Asistanı) */}
       <DepartmentMinutesModal
         isOpen={isMinutesModalOpen}
         onClose={() => setIsMinutesModalOpen(false)}
         settings={settings}
+      />
+
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={onNavigate}
+        plans={plans}
+        exams={exams}
+        libraryItems={libraryItems}
+        onSelectPlan={onSelectPlan}
+        onOpenMinutesModal={() => setIsMinutesModalOpen(true)}
+        onOpenJarvisBriefing={() => setIsJarvisModalOpen(true)}
+        onExportZip={handleExportZip}
+      />
+
+      <JarvisBriefingModal
+        isOpen={isJarvisModalOpen}
+        onClose={() => setIsJarvisModalOpen(false)}
+        settings={settings}
+        plans={plans}
+        exams={exams}
+        scales={scales}
+        reminders={reminders}
+        onNavigate={onNavigate}
+        onOpenMinutesModal={() => setIsMinutesModalOpen(true)}
+        onExportZip={handleExportZip}
       />
     </div>
   );

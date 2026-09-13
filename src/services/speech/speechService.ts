@@ -75,18 +75,22 @@ export class SpeechService {
       this.recognition.start();
 
       return () => {
-        if (this.recognition) {
-          try {
-            this.recognition.stop();
-          } catch (e) {
-            // ignore
-          }
-        }
+        this.stopListening();
       };
     } catch (e: any) {
       onError(e.message || 'Mikrofon başlatılamadı.');
       onEnd();
       return () => {};
+    }
+  }
+
+  static stopListening(): void {
+    if (this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch (e) {
+        // ignore
+      }
     }
   }
 }

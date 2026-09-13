@@ -1969,7 +1969,7 @@ export class DocxExportService {
   /**
    * MEB Tarih Zümre Öğretmenler Kurulu Toplantı Tutanağı (.docx)
    */
-  static async exportDepartmentMinutesToWord(minutes: DepartmentMinutesItem, settings: AppSettings): Promise<void> {
+  static async generateDepartmentMinutesBlob(minutes: DepartmentMinutesItem, settings: AppSettings): Promise<Blob> {
     const thinBorder = {
       top: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
       bottom: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
@@ -2046,15 +2046,19 @@ export class DocxExportService {
       ]
     });
 
-    const blob = await Packer.toBlob(doc);
+    return await Packer.toBlob(doc);
+  }
+
+  static async exportDepartmentMinutesToWord(minutes: DepartmentMinutesItem, settings: AppSettings): Promise<void> {
+    const blob = await this.generateDepartmentMinutesBlob(minutes, settings);
     const fileName = `${settings.schoolName}_Tarih_Zumre_Tutanagi_${minutes.meetingType}.docx`;
     saveAs(blob, fileName);
   }
 
   /**
-   * MEB Maarif Modeli 2 Dönemli Yıllık Plan Word Çıktısı (A4 Yatay)
+   * MEB Maarif Modeli 2 Dönemli Yıllık Plan Word Çıktısı (A4 Yatay) Blob Üretici
    */
-  static async exportFullTwoTermYearlyPlanToWord(plan: FullTwoTermYearlyPlan, settings: AppSettings): Promise<void> {
+  static async generateFullTwoTermYearlyPlanBlob(plan: FullTwoTermYearlyPlan, settings: AppSettings): Promise<Blob> {
     const thinBorder = {
       top: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
       bottom: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
@@ -2150,9 +2154,147 @@ export class DocxExportService {
       ]
     });
 
-    const blob = await Packer.toBlob(doc);
+    return await Packer.toBlob(doc);
+  }
+
+  static async exportFullTwoTermYearlyPlanToWord(plan: FullTwoTermYearlyPlan, settings: AppSettings): Promise<void> {
+    const blob = await this.generateFullTwoTermYearlyPlanBlob(plan, settings);
     const fileName = `${settings.schoolName}_Tarih_${plan.gradeLevel}Sinif_2Donemli_Yillik_Plan.docx`;
     saveAs(blob, fileName);
+  }
+
+  /**
+   * MEB Resmi Zümre Teslim Üst Yazısı ve Dizi Pusulası Blob Üretici
+   */
+  static async generateCoverLetterBlob(settings: AppSettings, academicYear: string): Promise<Blob> {
+    const thinBorder = {
+      top: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      left: { style: BorderStyle.SINGLE, size: 1, color: '888888' },
+      right: { style: BorderStyle.SINGLE, size: 1, color: '888888' }
+    };
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: {
+            page: {
+              size: { orientation: PageOrientation.PORTRAIT },
+              margin: { top: 720, bottom: 720, left: 720, right: 720 }
+            }
+          },
+          children: [
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'T.C.', bold: true, size: 22 })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'MİLLÎ EĞİTİM BAKANLIĞI', bold: true, size: 22, color: '003366' })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: settings.schoolName.toUpperCase(), bold: true, size: 20 })] }),
+            new Paragraph({ text: '' }),
+            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `Tarih: ${new Date().toLocaleDateString('tr-TR')}`, size: 18 })] }),
+            new Paragraph({ text: '' }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `${settings.schoolName.toUpperCase()} MÜDÜRLÜĞÜNE`, bold: true, size: 20, color: '003366' })] }),
+            new Paragraph({ text: '' }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `    ${academicYear} Eğitim ve Öğretim Yılı Tarih Zümresi olarak Türkiye Yüzyılı Maarif Modeli ve MEB Ortaöğretim Kurumları Yönetmeliği hükümleri doğrultusunda hazırlanan toplantı tutanakları, 9, 10, 11 ve 12. sınıf ünitelendirilmiş yıllık planları, okul temelli planlama ve sosyal etkinlik planları ekte dizi pusulası halinde bilgilerinize arz olunur.`,
+                  size: 18
+                })
+              ]
+            }),
+            new Paragraph({ text: '' }),
+            new Paragraph({ children: [new TextRun({ text: 'ZÜMRE EVRAKLARI DİZİ PUSULASI (İÇİNDEKİLER):', bold: true, size: 18, color: '003366' })] }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new TableRow({
+                  tableHeader: true,
+                  children: [
+                    new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sıra', bold: true, color: 'FFFFFF', size: 16 })] })] }),
+                    new TableCell({ width: { size: 60, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: 'Evrak / Belge Adı', bold: true, color: 'FFFFFF', size: 16 })] })] }),
+                    new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, shading: { fill: '0C8CE9' }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Format / Açıklama', bold: true, color: 'FFFFFF', size: 16 })] })] })
+                  ]
+                }),
+                new TableRow({
+                  children: [
+                    new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '1', size: 16 })] })] }),
+                    new TableCell({ width: { size: 60, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: 'Tarih Zümre Öğretmenler Kurulu Karar Tutanağı (12 Gündem Maddesi)', bold: true, size: 16 })] })] }),
+                    new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Resmi Karar Tutanağı', size: 15 })] })] })
+                  ]
+                }),
+                new TableRow({
+                  children: [
+                    new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '2', size: 16 })] })] }),
+                    new TableCell({ width: { size: 60, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: '9. Sınıf Tarih Dersi 2 Dönemli Yıllık Planı (Maarif Modeli)', size: 16 })] })] }),
+                    new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '37 Hafta MEB Takvimi', size: 15 })] })] })
+                  ]
+                }),
+                new TableRow({
+                  children: [
+                    new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '3', size: 16 })] })] }),
+                    new TableCell({ width: { size: 60, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: '10. Sınıf Tarih Dersi 2 Dönemli Yıllık Planı', size: 16 })] })] }),
+                    new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '37 Hafta MEB Takvimi', size: 15 })] })] })
+                  ]
+                }),
+                new TableRow({
+                  children: [
+                    new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '4', size: 16 })] })] }),
+                    new TableCell({ width: { size: 60, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: '11. Sınıf Tarih Dersi 2 Dönemli Yıllık Planı', size: 16 })] })] }),
+                    new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '37 Hafta MEB Takvimi', size: 15 })] })] })
+                  ]
+                }),
+                new TableRow({
+                  children: [
+                    new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '5', size: 16 })] })] }),
+                    new TableCell({ width: { size: 60, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: '12. Sınıf T.C. İnkılap Tarihi ve Atatürkçülük 2 Dönemli Yıllık Planı', size: 16 })] })] }),
+                    new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '37 Hafta MEB Takvimi', size: 15 })] })] })
+                  ]
+                }),
+                new TableRow({
+                  children: [
+                    new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '6', size: 16 })] })] }),
+                    new TableCell({ width: { size: 60, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ children: [new TextRun({ text: 'Okul Temelli Planlama ve Sosyal Etkinlik Faaliyet Çizelgesi', size: 16 })] })] }),
+                    new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, borders: thinBorder, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Maarif Modeli Ek-Form', size: 15 })] })] })
+                  ]
+                })
+              ]
+            }),
+            new Paragraph({ text: '' }),
+            new Paragraph({ text: '' }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                      children: [
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Teslim Eden', bold: true, size: 18, color: '003366' })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: settings.teacherName, bold: true, size: 19 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tarih Zümre Başkanı', size: 17 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'İmza: .............................', size: 16 })] })
+                      ]
+                    }),
+                    new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                      children: [
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Teslim Alan / Onaylayan', bold: true, size: 18, color: '003366' })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: settings.principalName, bold: true, size: 19 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Okul Müdürü', size: 17 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'İmza / Mühür: .............................', size: 16 })] })
+                      ]
+                    })
+                  ]
+                })
+              ]
+            })
+          ]
+        }
+      ]
+    });
+
+    return await Packer.toBlob(doc);
   }
 }
 

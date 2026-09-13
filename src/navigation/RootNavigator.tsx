@@ -11,6 +11,8 @@ import { PlanEditorModal } from '../features/plans/PlanEditorModal';
 import { ExamListView } from '../features/exams/ExamListView';
 import { ExamEditorModal } from '../features/exams/ExamEditorModal';
 import { VoiceVisualizer } from '../components/speech/VoiceVisualizer';
+import { CommandPalette } from '../components/common/CommandPalette';
+import { PortfolioZipService } from '../services/export/portfolioZipService';
 
 export const RootNavigator: React.FC = () => {
   const {
@@ -49,6 +51,8 @@ export const RootNavigator: React.FC = () => {
     stopListening
   } = useApp();
 
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = React.useState(false);
+
   const renderActiveScreen = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -61,6 +65,7 @@ export const RootNavigator: React.FC = () => {
             reminders={reminders}
             exams={exams}
             onNavigate={(tab) => setActiveTab(tab)}
+            onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
             onSelectPlan={(plan) => {
               setSelectedPlan(plan);
               setIsEditorOpen(true);
@@ -147,6 +152,7 @@ export const RootNavigator: React.FC = () => {
         setActiveTab={setActiveTab}
         settings={settings}
         onVoiceReminder={triggerVoiceReminder}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
@@ -175,6 +181,29 @@ export const RootNavigator: React.FC = () => {
         isListening={isListening}
         onStopSpeaking={stopSpeaking}
         onStopListening={stopListening}
+      />
+
+      {/* Global Command Palette (Ctrl+K) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={(tab) => setActiveTab(tab)}
+        plans={plans}
+        exams={exams}
+        libraryItems={libraryItems}
+        onSelectPlan={(plan) => {
+          setSelectedPlan(plan);
+          setIsEditorOpen(true);
+        }}
+        onOpenMinutesModal={() => {
+          setActiveTab('dashboard');
+        }}
+        onOpenJarvisBriefing={() => {
+          setActiveTab('dashboard');
+        }}
+        onExportZip={() => {
+          PortfolioZipService.exportFullPortfolioZip(settings);
+        }}
       />
 
       {/* Footer */}

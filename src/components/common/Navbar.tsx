@@ -10,7 +10,8 @@ import {
   Sparkles,
   School,
   Volume2,
-  FileCheck
+  FileCheck,
+  Search
 } from 'lucide-react';
 import { AppSettings } from '../../core/types';
 import { SpeechService } from '../../services/speech/speechService';
@@ -22,13 +23,15 @@ interface NavbarProps {
   setActiveTab: (tab: ActiveTab) => void;
   settings: AppSettings;
   onVoiceReminder: () => void;
+  onOpenCommandPalette?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   settings,
-  onVoiceReminder
+  onVoiceReminder,
+  onOpenCommandPalette
 }) => {
   const navItems: Array<{ id: ActiveTab; label: string; icon: React.ReactNode; color: string }> = [
     { id: 'dashboard', label: 'Ana Panel', icon: <Sparkles className="w-4 h-4" />, color: 'from-blue-500 to-indigo-600' },
@@ -70,8 +73,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Quick Voice Assistant Trigger */}
+          {/* Quick Voice Assistant Trigger & Search */}
           <div className="flex items-center gap-2">
+            {onOpenCommandPalette && (
+              <button
+                onClick={onOpenCommandPalette}
+                title="Hızlı Komut Paleti (Ctrl+K)"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300/80 shadow-xs cursor-pointer transition-all active:scale-95"
+              >
+                <Search className="w-3.5 h-3.5 text-slate-600" />
+                <span className="hidden sm:inline">Ara</span>
+                <kbd className="hidden md:inline px-1.5 py-0.5 bg-white rounded text-[10px] font-mono text-slate-500 border border-slate-200">
+                  Ctrl+K
+                </kbd>
+              </button>
+            )}
             <button
               onClick={onVoiceReminder}
               title="Günün Maarif Hatırlatmasını Sesli Dinle"

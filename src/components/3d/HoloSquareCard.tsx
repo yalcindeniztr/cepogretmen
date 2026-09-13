@@ -8,6 +8,7 @@ interface HoloSquareCardProps {
   value: string | number;
   subtitle: string;
   badgeText?: string;
+  pulseBadge?: string;
   icon: React.ReactNode;
   variant?: HoloVariant;
   actionText?: string;
@@ -133,6 +134,7 @@ export const HoloSquareCard: React.FC<HoloSquareCardProps> = ({
   value,
   subtitle,
   badgeText,
+  pulseBadge,
   icon,
   variant = 'blue',
   actionText,
@@ -154,6 +156,14 @@ export const HoloSquareCard: React.FC<HoloSquareCardProps> = ({
       }}
       className={`group relative flex flex-col justify-between p-4 sm:p-5 rounded-2xl border-2 bg-gradient-to-br ${conf.bgGradient} ${conf.borderStyle} ${conf.shadowStyle} ${conf.hoverGlow} backdrop-blur-md transition-all duration-300 hover:-translate-y-1.5 hover:scale-[1.015] select-none cursor-pointer overflow-hidden ${className}`}
     >
+      {/* Dynamic Pulse Notification Badge */}
+      {pulseBadge && (
+        <div className="absolute top-2 right-2 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-black tracking-wide shadow-md border border-rose-400/50 animate-pulse">
+          <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+          <span>{pulseBadge}</span>
+        </div>
+      )}
+
       {/* Hologram Prismatic Shimmer Sheen */}
       <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 group-hover:translate-x-full transition-all duration-700 pointer-events-none -translate-x-full" />
 
